@@ -1,6 +1,7 @@
 class WorksController < ApplicationController
   # We should always be able to tell what category
   # of work we're dealing with
+  before_action :require_login, only: [:index, :show]
   before_action :category_from_work, except: [:root, :index, :new, :create]
 
   def root
@@ -11,6 +12,12 @@ class WorksController < ApplicationController
   end
 
   def index
+    @user = User.find_by(id: params[:id])
+    unless @user
+      flash[:status] = :error
+      flash[:message] = 'You must be logged in to see this page'
+      redirect_to root_path
+    end
     @works_by_category = Work.to_category_hash
   end
 
@@ -23,18 +30,26 @@ class WorksController < ApplicationController
     @media_category = @work.category
     if @work.save
       flash[:status] = :success
-      flash[:result_text] = "Successfully created #{@media_category.singularize} #{@work.id}"
+      flash[:message] = "Successfully created #{@media_category.singularize} #{@work.id}"
       redirect_to work_path(@work)
     else
       flash[:status] = :failure
-      flash[:result_text] = "Could not create #{@media_category.singularize}"
+      flash[:message] = "Could not create #{@media_category.singularize}"
       flash[:messages] = @work.errors.messages
       render :new, status: :bad_request
     end
   end
 
   def show
+    @user = User.find_by(id: params[:id])
+    
+    unless @user
+      head :not_found
+      return
+    end
+
     @votes = @work.votes.order(created_at: :desc)
+
   end
 
   def edit
@@ -44,11 +59,11 @@ class WorksController < ApplicationController
     @work.update_attributes(media_params)
     if @work.save
       flash[:status] = :success
-      flash[:result_text] = "Successfully updated #{@media_category.singularize} #{@work.id}"
+      flash[:message] = "Successfully updated #{@media_category.singularize} #{@work.id}"
       redirect_to work_path(@work)
     else
       flash.now[:status] = :failure
-      flash.now[:result_text] = "Could not update #{@media_category.singularize}"
+      flash.now[:message] = "Could not update #{@media_category.singularize}"
       flash.now[:messages] = @work.errors.messages
       render :edit, status: :not_found
     end
@@ -57,7 +72,7 @@ class WorksController < ApplicationController
   def destroy
     @work.destroy
     flash[:status] = :success
-    flash[:result_text] = "Successfully destroyed #{@media_category.singularize} #{@work.id}"
+    flash[:message] = "Successfully destroyed #{@media_category.singularize} #{@work.id}"
     redirect_to root_path
   end
 
@@ -67,13 +82,13 @@ class WorksController < ApplicationController
       vote = Vote.new(user: @login_user, work: @work)
       if vote.save
         flash[:status] = :success
-        flash[:result_text] = "Successfully upvoted!"
+        flash[:message] = "Successfully upvoted!"
       else
-        flash[:result_text] = "Could not upvote"
-        flash[:messages] = vote.errors.messages
+        flash[:message] = "Could not upvote"
+        flash[:message] = vote.errors.messages
       end
     else
-      flash[:result_text] = "You must log in to do that"
+      flash[:message] = "You must log in to do that"
     end
 
     # Refresh the page to show either the updated vote count

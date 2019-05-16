@@ -12,12 +12,6 @@ class WorksController < ApplicationController
   end
 
   def index
-    @user = User.find_by(id: params[:id])
-    unless @user
-      flash[:status] = :error
-      flash[:message] = 'You must be logged in to see this page'
-      redirect_to root_path
-    end
     @works_by_category = Work.to_category_hash
   end
 
@@ -41,13 +35,7 @@ class WorksController < ApplicationController
   end
 
   def show
-    @user = User.find_by(id: params[:id])
-    
-    unless @user
-      head :not_found
-      return
-    end
-
+  
     @votes = @work.votes.order(created_at: :desc)
 
   end
